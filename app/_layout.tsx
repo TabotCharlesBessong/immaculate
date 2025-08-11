@@ -1,33 +1,43 @@
 import React, { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
-import { ActivityIndicator, View } from 'react-native'
+import { ActivityIndicator, View, StyleSheet } from 'react-native'
 import { COLORS } from '@/constants/theme'
 
-// This component handles the redirection logic
 const RootLayoutNav = () => {
   const { token, isLoading } = useAuth()
   const segments = useSegments()
   const router = useRouter()
 
   useEffect(() => {
-    if (isLoading) return // Don't redirect until we've checked for a token
+    console.log(
+      `[Layout] useEffect triggered. isLoading: ${isLoading}, token: ${!!token}, segments: ${segments.join('/')}`
+    )
+    if (isLoading) {
+      // Don't do anything while we're still loading the initial token.
+      return
+    }
 
     const inAuthGroup = segments[0] === '(auth)'
 
-    if (token && !inAuthGroup) {
-      // User is authenticated but not in the main app group, redirect
-      router.replace('/login')
-    } else if (!token && !inAuthGroup) {
+    if (token && inAuthGroup) {
+      // User is authenticated but is in the auth screen group.
+      // This happens after a successful login. Redirect to the main app.
+      console.log(
+        '[Layout] User is authenticated, redirecting from auth to tabs.'
+      )
       router.replace('/(tabs)')
-      // User is not authenticated and not in the auth group, redirect
+    } else if (!token && !inAuthGroup) {
+      // User is not authenticated and is not in the auth group.
+      // Redirect them to the login screen.
+      console.log('[Layout] User is not authenticated, redirecting to login.')
+      router.replace('/(auth)/login')
     }
-  }, [token, isLoading, segments,router]) // Rerun effect when token or loading state changes
+  }, [token, isLoading, segments,router]) // The dependencies are key
 
   if (isLoading) {
-    // Show a loading spinner or splash screen while checking auth state
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     )
@@ -41,7 +51,6 @@ const RootLayoutNav = () => {
   )
 }
 
-// This is the main export which wraps everything in the AuthProvider
 export default function RootLayout() {
   return (
     <AuthProvider>
@@ -49,3 +58,12 @@ export default function RootLayout() {
     </AuthProvider>
   )
 }
+
+const styles = StyleSheet.create({
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff', // Or your app's background color
+  },
+})

@@ -5,11 +5,88 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react'
-// This import is correct
-import * as SecureStore from 'expo-secure-store'
 import { authApi } from '@/lib/authApi'
 
 const TOKEN_KEY = 'tafuta-auth-token'
+console.log('AuthContext file is being read.')
+
+// Storage abstraction layer
+const createStorage = () => {
+  // Check if we're in a web environment
+  if (typeof window !== 'undefined') {
+    return {
+      async getItem(key: string): Promise<string | null> {
+        try {
+          return localStorage.getItem(key)
+        } catch (error) {
+          console.error('Error getting item from localStorage:', error)
+          return null
+        }
+      },
+      async setItem(key: string, value: string): Promise<void> {
+        try {
+          localStorage.setItem(key, value)
+        } catch (error) {
+          console.error('Error setting item in localStorage:', error)
+        }
+      },
+      async removeItem(key: string): Promise<void> {
+        try {
+          localStorage.removeItem(key)
+        } catch (error) {
+          console.error('Error removing item from localStorage:', error)
+        }
+      },
+    }
+  }
+
+  // For React Native/Expo environments
+  try {
+    // Dynamic import to avoid issues in web environments
+    const SecureStore = require('expo-secure-store')
+    return {
+      async getItem(key: string): Promise<string | null> {
+        try {
+          return await SecureStore.getItemAsync(key)
+        } catch (error) {
+          console.error('Error getting item from SecureStore:', error)
+          return null
+        }
+      },
+      async setItem(key: string, value: string): Promise<void> {
+        try {
+          await SecureStore.setItemAsync(key, value)
+        } catch (error) {
+          console.error('Error setting item in SecureStore:', error)
+        }
+      },
+      async removeItem(key: string): Promise<void> {
+        try {
+          await SecureStore.deleteItemAsync(key)
+        } catch (error) {
+          console.error('Error removing item from SecureStore:', error)
+        }
+      },
+    }
+  } catch (error) {
+    console.warn('SecureStore not available, falling back to memory storage')
+    // Fallback to in-memory storage (not persistent)
+    let memoryStorage: { [key: string]: string } = {}
+    return {
+      async getItem(key: string): Promise<string | null> {
+        return memoryStorage[key] || null
+      },
+      async setItem(key: string, value: string): Promise<void> {
+        memoryStorage[key] = value
+      },
+      async removeItem(key: string): Promise<void> {
+        delete memoryStorage[key]
+      },
+    }
+  }
+}
+
+const storage = createStorage()
 
 interface User {
   id: string
@@ -19,8 +96,8 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null
-  isLoading: boolean // Changed to track initial load
-  isMutating: boolean // Changed to track login/logout actions
+  isLoading: boolean // For initial app load
+  isMutating: boolean // For login/register/logout actions
   login: (email: string, pass: string) => Promise<void>
   register: (email: string, pass: string) => Promise<void>
   logout: () => void
@@ -36,16 +113,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const loadToken = async () => {
+      console.log('[Auth] Checking for stored token...')
       try {
-        // This usage is correct
-        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY)
+        const storedToken = await storage.getItem(TOKEN_KEY)
         if (storedToken) {
+          console.log('[Auth] Token found in storage!')
           setToken(storedToken)
-          // In a real app, you'd fetch the user profile here. We'll fake it.
-          setUser({ id: '1', email: 'user from storage' })
+          setUser({ id: 'cached-user', email: 'Logged in from storage' })
+        } else {
+          console.log('[Auth] No token found in storage.')
         }
-      } catch (e) {
-        console.error('Failed to load token from storage', e)
+      } catch (error) {
+        console.error('[Auth] Error loading token from storage:', error)
       } finally {
         setIsLoading(false)
       }
@@ -53,54 +132,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadToken()
   }, [])
 
-  const handleAuthAction = async (
-    action: Promise<{ token: string; user: User }>
-  ) => {
+  const login = async (email: string, pass: string) => {
     setIsMutating(true)
+    console.log('[Auth] Attempting login via context...')
     try {
-      const { token: newToken, user: newUser } = await action
-      setUser(newUser)
+      const { token: newToken, user: newUser } = await authApi.login(
+        email,
+        pass
+      )
+      console.log('[Auth] Login API call successful. Setting state.')
       setToken(newToken)
-      // This usage is correct
-      await SecureStore.setItemAsync(TOKEN_KEY, newToken)
+      setUser(newUser)
+      await storage.setItem(TOKEN_KEY, newToken)
+    } catch (error) {
+      console.error('[Auth] Login API call failed:', error)
+      throw error
     } finally {
       setIsMutating(false)
     }
   }
 
-  const login = (email: string, pass: string) =>
-    handleAuthAction(authApi.login(email, pass))
-  const register = (email: string, pass: string) =>
-    handleAuthAction(authApi.register(email, pass))
+  const register = async (email: string, pass: string) => {
+    setIsMutating(true)
+    console.log('[Auth] Attempting register via context...')
+    try {
+      const { token: newToken, user: newUser } = await authApi.register(
+        email,
+        pass
+      )
+      console.log('[Auth] Register API call successful. Setting state.')
+      setToken(newToken)
+      setUser(newUser)
+      await storage.setItem(TOKEN_KEY, newToken)
+    } catch (error) {
+      console.error('[Auth] Register API call failed:', error)
+      throw error
+    } finally {
+      setIsMutating(false)
+    }
+  }
 
   const logout = async () => {
     setIsMutating(true)
+    console.log('[Auth] Logging out...')
     try {
       await authApi.logout()
       setUser(null)
       setToken(null)
-      // This usage is correct
-      await SecureStore.deleteItemAsync(TOKEN_KEY)
-    } catch (e) {
-      console.error('Failed to log out', e)
+      await storage.removeItem(TOKEN_KEY)
+      console.log('[Auth] Logout complete. Token removed.')
+    } catch (error) {
+      console.error('[Auth] Error during logout:', error)
     } finally {
       setIsMutating(false)
     }
   }
 
-  const value = {
-    user,
-    token,
-    isLoading,
-    isMutating, // Provide this for loading spinners on buttons
-    login,
-    register,
-    logout,
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{ user, token, isLoading, isMutating, login, register, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
+// Custom hook remains the same
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
