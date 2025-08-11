@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-export default function HomeScreen() {
+export default function ScannerScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Home Screen</Text>
