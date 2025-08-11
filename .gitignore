@@ -6,6 +6,7 @@ node_modules/
 # Expo
 .expo/
 dist/
+/phases
 web-build/
 expo-env.d.ts
 
@@ -16,7 +17,7 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
-*.mobileprovision
+*.
 
 # Metro
 .metro-health-check*
