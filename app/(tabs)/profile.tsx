@@ -1,19 +1,29 @@
+import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useAuth } from '@/context/AuthContext'
 import ScreenWrapper from '@/components/ScreenWrapper'
 import Button from '@/components/Button'
-import React from 'react'
+import { FONTS, SIZES } from '@/constants/theme'
 
 export default function ProfileScreen() {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+  const { user, logout, isLoading } = useAuth()
+
+  // Here, you would fetch the full user profile if `user` object in context is minimal
+  // For now, we'll just display the email from the context.
 
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <Text style={styles.title}>Profile Screen</Text>
-        <Text style={styles.apiKeyText}>
-          Google Maps Key: {apiKey ? 'Loaded ✅' : 'Not Found ❌'}
+        <Text style={styles.title}>My Profile</Text>
+        <Text style={styles.emailText}>
+          Logged in as: {user ? user.email : '...'}
         </Text>
-        <Button title="Log Out" onPress={() => alert('Logging out!')} />
+        <Button
+          title="Log Out"
+          onPress={logout}
+          isLoading={isLoading}
+          variant="secondary"
+        />
       </View>
     </ScreenWrapper>
   )
@@ -24,15 +34,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: SIZES.padding,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    ...FONTS.h1,
+    marginBottom: SIZES.padding,
   },
-  apiKeyText: {
-    marginBottom: 20,
-    textAlign: 'center',
+  emailText: {
+    ...FONTS.body3,
+    marginBottom: SIZES.padding * 2,
   },
 })
