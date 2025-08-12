@@ -39,6 +39,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="add"
+        options={{
+          title: 'Add',
+          headerShown: false, // We use ScreenWrapper inside
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="plus-square" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   )
 }
