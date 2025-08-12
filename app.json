@@ -35,10 +35,18 @@
         }
       ],
       "expo-secure-store",
-      ["expo-camera",
-      {
-        "cameraPermission": "Allow HOME to access your camera to scan QR codes."
-      }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow HOME to access your camera to scan QR codes and take photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to share them within the app."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
