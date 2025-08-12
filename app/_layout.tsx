@@ -47,6 +47,20 @@ const RootLayoutNav = () => {
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="scanner"
+        options={{
+          title: 'Scanner',
+          presentation: 'modal', // Optional: Makes it slide up from the bottom
+        }}
+      />
+      <Stack.Screen
+        name="add"
+        options={{
+          title: 'Add Photo',
+          presentation: 'modal',
+        }}
+      />
     </Stack>
   )
 }
