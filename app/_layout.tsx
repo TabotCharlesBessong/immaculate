@@ -1,30 +1,83 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import React from "react"
+import React, { useEffect } from 'react'
+import { Stack, useRouter, useSegments } from 'expo-router'
+import { AuthProvider, useAuth } from '@/context/AuthContext'
+import { ActivityIndicator, View, StyleSheet } from 'react-native'
+import { COLORS } from '@/constants/theme'
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+const RootLayoutNav = () => {
+  const { token, isLoading } = useAuth()
+  const segments = useSegments()
+  const router = useRouter()
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  useEffect(() => {
+    console.log(
+      `[Layout] useEffect triggered. isLoading: ${isLoading}, token: ${!!token}, segments: ${segments.join('/')}`
+    )
+    if (isLoading) {
+      // Don't do anything while we're still loading the initial token.
+      return
+    }
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
+    const inAuthGroup = segments[0] === '(auth)'
+
+    if (token && inAuthGroup) {
+      // User is authenticated but is in the auth screen group.
+      // This happens after a successful login. Redirect to the main app.
+      console.log(
+        '[Layout] User is authenticated, redirecting from auth to tabs.'
+      )
+      router.replace('/(tabs)')
+    } else if (!token && !inAuthGroup) {
+      // User is not authenticated and is not in the auth group.
+      // Redirect them to the login screen.
+      console.log('[Layout] User is not authenticated, redirecting to login.')
+      router.replace('/(auth)/login')
+    }
+  }, [token, isLoading, segments,router]) // The dependencies are key
+
+  if (isLoading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    )
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="scanner"
+        options={{
+          title: 'Scanner',
+          presentation: 'modal', // Optional: Makes it slide up from the bottom
+        }}
+      />
+      <Stack.Screen
+        name="add"
+        options={{
+          title: 'Add Photo',
+          presentation: 'modal',
+        }}
+      />
+    </Stack>
+  )
 }
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  )
+}
+
+const styles = StyleSheet.create({
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff', // Or your app's background color
+  },
+})
