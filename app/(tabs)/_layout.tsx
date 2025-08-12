@@ -49,6 +49,16 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          headerShown: false, // We created a custom header overlay
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="map-marker" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   )
 }
